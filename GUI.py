@@ -206,7 +206,7 @@ class MyListCtrl(wx.ListCtrl):
         self.basePath_tgt = None
         
         # Constructeurs parents
-        wx.ListCtrl.__init__(self, parent=parent, style=wx.LC_REPORT)
+        wx.ListCtrl.__init__(self, parent, style=wx.LC_REPORT)
         
         # Noms de colonne
         self.InsertColumn(col=MyListCtrl._PATH, heading="Path", width=200)
@@ -392,7 +392,7 @@ class MyListCtrl(wx.ListCtrl):
                        handler=lambda(event):
                                      self.AllerA(os.path.dirname(tgtObj)),
                        source=mItem_goTgt)
-            menu.AppendItem(item=mItem_goTgt)
+            menu.AppendItem(mItem_goTgt)
             # - aller � la cible
             mItem_supTgt = wx.MenuItem(parentMenu=menu, id=wx.ID_ANY, text="Supprimer la cible")
             self.Bind(event=wx.EVT_MENU,
@@ -401,7 +401,7 @@ class MyListCtrl(wx.ListCtrl):
                        source=mItem_supTgt)
             menu.AppendItem(item=mItem_supTgt)
         
-        self.PopupMenu(menu=menu)
+        self.PopupMenu(menu)
     
     
     
@@ -466,7 +466,7 @@ class MyListCtrl(wx.ListCtrl):
                     self.SetStringItem(index=index, col=MyListCtrl._EXTENSION, label=extension)
                 self.SetStringItem(index=index, col=MyListCtrl._ACTION, label=_SUPPRESSION)
         except Exception, err:
-            wx.MessageDialog(self, message=str(err), "Erreur", wx.OK | wx.ICON_EXCLAMATION).ShowModal()
+            wx.MessageDialog(self, str(err), "Erreur", wx.OK | wx.ICON_EXCLAMATION).ShowModal()
     
     
     
@@ -594,23 +594,23 @@ class SynchonizerFrame(wx.Frame):
         #         Exit
         menuBar_file_exit = wx.MenuItem(menuBar_file, wx.ID_ANY, "&Exit\tAlt-F4")
         menuBar_file_exit.SetBitmap(wx.Bitmap("icons/exit.png", wx.BITMAP_TYPE_PNG))
-        self.Bind(wx.EVT_MENU, self.OnMenu_file_exit, menuBar_file_exit)
+        self.Bind(wx.EVT_MENU, lambda event: self.Close(), menuBar_file_exit)
         menuBar_file.AppendItem(menuBar_file_exit)
         #     Action
         menuBar_action = wx.Menu()
         menuBar.Append(menuBar_action, "Action")
         #         Analyze
         self.menuBar_action_analyze = wx.MenuItem(menuBar_action, wx.ID_ANY, "Analyze")
-        self.Bind(wx.EVT_MENU, self.OnMenu_action_analyze, self.menuBar_action_analyze)
+        self.Bind(wx.EVT_MENU, lambda event: self.OnRun_analyze(), self.menuBar_action_analyze)
         menuBar_action.AppendItem(self.menuBar_action_analyze)
         #         Run
         self.menuBar_action_run = wx.MenuItem(menuBar_action, wx.ID_ANY, "Run")
-        self.Bind(wx.EVT_MENU, self.OnMenu_action_run, self.menuBar_action_run)
+        self.Bind(wx.EVT_MENU, lambda event: self.OnRun_run(), self.menuBar_action_run)
         menuBar_action.AppendItem(self.menuBar_action_run)
         #         Stop
         self.menuBar_action_stop = wx.MenuItem(menuBar_action, wx.ID_ANY, "Stop")
         self.menuBar_action_stop.Enable(False)
-        self.Bind(wx.EVT_MENU, self.OnMenu_action_stop, self.menuBar_action_stop)
+        self.Bind(wx.EVT_MENU, lambda event: self.Stop(), self.menuBar_action_stop)
         menuBar_action.AppendItem(self.menuBar_action_stop)
         #     Utils
         menuBar_utils = wx.Menu()
@@ -645,17 +645,17 @@ class SynchonizerFrame(wx.Frame):
         self.sizer_panel.Add(self.tBar, flag=wx.EXPAND)
         #                     Exit
         tool_exit = self.tBar.AddLabelTool(wx.ID_ANY, "Exit", wx.Bitmap("icons/exit.png", wx.BITMAP_TYPE_PNG), shortHelp="Exit")
-        self.tBar.Bind(wx.EVT_TOOL, self.OnEventTool_exit, tool_exit)
+        self.tBar.Bind(wx.EVT_TOOL, lambda event: self.Close(), tool_exit)
         # 
         self.tBar.AddSeparator()
         #                     Delete selected lines
         tool_deleteSelectedLines = self.tBar.AddLabelTool(wx.ID_ANY, "Delete selected lines", wx.Bitmap("icons/delete.png", wx.BITMAP_TYPE_PNG), shortHelp='Delete selected liness')
-        self.tBar.Bind(wx.EVT_TOOL, self.OnEventTool_deleteSelectedLines, tool_deleteSelectedLines)
+        self.tBar.Bind(wx.EVT_TOOL, lambda event: self.lCtrl.DeleteSelectedIndex(), tool_deleteSelectedLines)
         # 
         self.tBar.Realize()
         
         #                 Ligne séparatrice
-        ligne_titre_options = wx.StaticLine(parent=self.panel_fenetre)
+        ligne_titre_options = wx.StaticLine(self.panel_fenetre)
         self.sizer_panel.Add(ligne_titre_options, flag=wx.ALL | wx.EXPAND, border=5)
         
         #                 Options title
@@ -675,7 +675,7 @@ class SynchonizerFrame(wx.Frame):
         gSizer_options.Add(self.tCtrl_src, flag=wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_VERTICAL, border=5)
         #                     Input browse
         self.button_src = wx.Button(self.panel_fenetre, label="Browse")
-        self.button_src.Bind(wx.EVT_BUTTON, self.OnButtonClick_browseSrc)
+        self.button_src.Bind(wx.EVT_BUTTON, lambda event: self.BrowseSrc())
         gSizer_options.Add(self.button_src, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL, border=5)
         #                     Target title
         sText_tgt = wx.StaticText(self.panel_fenetre, label="Target folder:")
@@ -685,7 +685,7 @@ class SynchonizerFrame(wx.Frame):
         gSizer_options.Add(self.tCtrl_tgt, flag=wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_VERTICAL, border=5)
         #                     Target browse
         self.button_tgt = wx.Button(self.panel_fenetre, label="Browse")
-        self.button_tgt.Bind(wx.EVT_BUTTON, self.OnButtonClick_browseTgt)
+        self.button_tgt.Bind(wx.EVT_BUTTON, lambda event: self.BrowseTgt())
         gSizer_options.Add(self.button_tgt, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL, border=5)
         
         #                 Ligne séparatrice
@@ -699,8 +699,8 @@ class SynchonizerFrame(wx.Frame):
         self.sizer_panel.Add(sText_modifications, flag=wx.ALL, border=5)
         
         #                 Liste des modifications
-        self.lCtrl = MyListCtrl(parent=self.panel_fenetre)
-        self.sizer_panel.Add(self.lCtrl, proportion=1, flag=wx.ALL | wx.EXPAND, border=5)
+        self.lCtrl = MyListCtrl(self.panel_fenetre)
+        self.sizer_panel.Add(self.lCtrl, 1, wx.ALL | wx.EXPAND, 5)
         
         #                 Sizer boutons d'action sur la liste
         # bSizer_buttonsListe = wx.BoxSizer( orient = wx.HORIZONTAL )
@@ -708,8 +708,8 @@ class SynchonizerFrame(wx.Frame):
         #                     Bouton "supprimer la ligne"
         # bm_supprimer = wx.Bitmap( name = "icons/supprimer.png", type = wx.BITMAP_TYPE_ANY )
         # bmButton_supprimer = wx.BitmapButton( self.panel_fenetre, bitmap = bm_supprimer, size = (20,20) )
-        # bmButton_supprimer.Bind( event = wx.EVT_BUTTON, handler = self.OnButtonClick_supprimerSelection )
-        # bSizer_buttonsListe.Add( item = bmButton_supprimer, flag = wx.ALL, border = 5 )
+        # bmButton_supprimer.Bind(wx.EVT_BUTTON, lambda event: self.lCtrl.DeleteSelectedIndex() )
+        # bSizer_buttonsListe.Add(bmButton_supprimer, flag=wx.ALL, border=5)
         
         #                 Ligne séparatrice
         ligne_modifications_actions = wx.StaticLine(self.panel_fenetre)
@@ -721,18 +721,18 @@ class SynchonizerFrame(wx.Frame):
         #                     Bouton stop
         self.button_stop = wx.Button(self.panel_fenetre, label="Stop")
         self.button_stop.Show(False)
-        self.button_stop.Bind(wx.EVT_BUTTON, self.OnButtonClick_stop)
+        self.button_stop.Bind(wx.EVT_BUTTON, lambda event: self.stop())
         self.bSizer_actions.Add(self.button_stop, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL, border=5)
         #                     Bouton analyze
         self.button_analyze = wx.Button(self.panel_fenetre, label="Analyze")
-        self.button_analyze.Bind(wx.EVT_BUTTON, self.OnButtonClick_analyze)
+        self.button_analyze.Bind(wx.EVT_BUTTON, lambda event: self.OnRun_analyze())
         self.bSizer_actions.Add(self.button_analyze, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL, border=5)
         #                     Barre de chargement
         self.chargement = wx.Gauge(self.panel_fenetre)
         self.bSizer_actions.Add(self.chargement, 1, wx.ALL, 5)
         #                     Bouton mise à jour
         self.button_run = wx.Button(self.panel_fenetre, label="Mise à jour")
-        self.button_run.Bind(wx.EVT_BUTTON, self.OnButtonClick_run)
+        self.button_run.Bind(wx.EVT_BUTTON, lambda event: self.OnRun_run())
         self.bSizer_actions.Add(self.button_run, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL, border=5)
         
         # Bouton de test
@@ -753,7 +753,7 @@ class SynchonizerFrame(wx.Frame):
         shutil.copytree("tests/Cas_test_sauv", "tests/Cas_test")
         self.tCtrl_src.SetValue("tests/Cas_test\\src")
         self.tCtrl_tgt.SetValue("tests/Cas_test\\tgt")
-        self.OnButtonClick_analyze(None)
+        self.OnRun_analyze()
     
     
     # TODO: delete me
@@ -792,35 +792,8 @@ class SynchonizerFrame(wx.Frame):
         event.Skip()
     
     
-    def OnMenu_file_exit(self, event):
-        '''
-        Handling the "File">"Exit" menu event.
-        @param event: The event.
-        '''
-        self.Close()
-    
-    
-    def OnMenu_action_analyze(self, event):
-        '''
-        Handling the "Action">"Analyze" menu event.
-        @param event: The event.
-        '''
-        self.OnRun_analyze()
-    
-    
-    def OnMenu_action_run(self, event):
-        '''
-        Handling the "Action">"Run" menu event.
-        @param event: The event.
-        '''
-        self.OnRun_run()
-    
-    
-    def OnMenu_action_stop(self, event):
-        '''
-        Handling the "Action">"Stop" menu event.
-        @param event: The event.
-        '''
+    def Stop(self):
+        '''Stop the analyze or running.'''
         self.stop = True
     
     
@@ -833,7 +806,6 @@ class SynchonizerFrame(wx.Frame):
         event.Skip()
     
     
-    
     def OnMenu_help_about(self, event):
         '''
         Handling the "Help">"About" menu event.
@@ -843,135 +815,68 @@ class SynchonizerFrame(wx.Frame):
         pass
     
     
-    def OnEventTool_exit(self, event):
-        '''
-        Handling the "Exit" toolbar event.
-        @param event: The event.
-        '''
-        self.Close()
+    def PathChange(self):
+        '''User change a src or tgt path.'''
+        self.lCtrl.SetBasePath(src=self.tCtrl_src.Value, tgt=self.tCtrl_tgt.Value)
+        self.lCtrl.DeleteAllItems()
     
     
-    def OnEventTool_deleteSelectedLines(self, event):
-        '''
-        Handling the "Delete selected lines" toolbar event.
-        @param event: The event.
-        '''
-        self.lCtrl.DeleteSelectedIndex()
-    
-    
-    def OnButtonClick_browseSrc(self, event):
-        '''
-        Handling the "Browse" input button clicking event.
-        @param event: The event.
-        '''
+    def BrowseSrc(self,):
+        '''Handling the "Browse" input button clicking event.'''
         
         dDialog = wx.DirDialog(self.panel_fenetre, "Input folder", style=wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
-        if dDialog.ShowModal() != wx.ID_OK:
-            return
+        if dDialog.ShowModal() != wx.ID_OK: return
+        if os.path.samefile(dDialog.Path, self.tCtrl_src.Value): return
         
-        path = dDialog.Path
-        if path == self.tCtrl_src.Value:  # TODO: os.path.same
-            return
-        if path == self.tCtrl_tgt.Value:  # TODO: os.path.same
-            self.tCtrl_tgt.Value = ""
+        self.tCtrl_src.Value = dDialog.Path
+        if os.path.samefile(self.tCtrl_src.Value, self.tCtrl_tgt.Value): self.tCtrl_tgt.Value = None
         
-        # TODO
-        self.tCtrl_src.Value = path
-        self.lCtrl.SetBasePath(src=self.tCtrl_src.Value, tgt=self.tCtrl_tgt.Value)
-        self.lCtrl.DeleteAllItems()
+        self.PathChange()
     
     
-    def OnButtonClick_browseTgt(self, event):
-        '''
-        Handling the "Browse" target button clicking event.
-        @param event: The event.
-        '''
+    def BrowseTgt(self,):
+        '''Handling the "Browse" target button clicking event.'''
         
         dDialog = wx.DirDialog(self.panel_fenetre, "Target folder", style=wx.DD_DEFAULT_STYLE)
-        if dDialog.ShowModal() != wx.ID_OK:
-            return
+        if dDialog.ShowModal() != wx.ID_OK: return
+        if os.path.samefile(dDialog.Path, self.tCtrl_tgt.Value): return
         
-        path = dDialog.Path
-        if path == self.tCtrl_tgt.Value:
-            return
-        # - cible diff�rente de la source
-        if path == self.tCtrl_src.Value:
-            wx.MessageDialog(self, "The archive folder must be diffrent to the data folder.", "Erreur", wx.OK | wx.ICON_EXCLAMATION).ShowModal()
-            return
+        self.tCtrl_tgt.Value = dDialog.Path
+        if os.path.samefile(self.tCtrl_src.Value, self.tCtrl_tgt.Value): self.tCtrl_src.Value = None
         
-        self.tCtrl_tgt.Value = path
-        self.lCtrl.SetBasePath(src=self.tCtrl_src.Value, tgt=self.tCtrl_tgt.Value)
-        self.lCtrl.DeleteAllItems()
+        self.PathChange()
     
-    
-    def OnButtonClick_supprimerSelection(self, event):
-        '''
-        Handling the "Delete selected lines" button clicking event.
-        @param event: The event.
-        '''
-        self.lCtrl.DeleteSelectedIndex()
-    
-    
-    def OnButtonClick_stop(self, event):
-        '''
-        Handling the stopping synchronization.
-        @param event: The event.
-        '''
-        self.stop = True
-    
-    
-    def OnButtonClick_analyze(self, event):
-        '''
-        Handling the analyzing folders event.
-        @param event: The event.
-        '''
-        self.OnRun_analyze()
-    
-    
-    def OnButtonClick_run(self, event):
-        '''
-        @brief Clic sur le bouton "Mise à jour".
-        @param event: The event.
-        '''
-        self.OnRun_run()
-    
-    ####################################################################################################
-    # Analyse et mise à jour des fichiers et répertoires
-    ####################################################################################################
     
     def OnRun_analyze(self):
-        '''
-        @brief Analyse des répertoires.
-        @details Vérifier les paramètres avant de lancer le thread l'analyse.
-        '''
+        '''Analyze folders.'''
         
-        # Tests:
-        # - aucune action en cours
+        # Action already running
         if self.thread_analyze is not None:
             return
         if self.thread_maj is not None:
             return
-        # - champs corrects
-        if not os.path.isdir(self.tCtrl_src.GetValue()):
+        
+        # Invalid parameters
+        if not os.path.isdir(self.tCtrl_src.Value):
             wx.MessageDialog(self, "Répertoire source incorrect", "Erreur", wx.OK | wx.ICON_EXCLAMATION).ShowModal()
             return
-        if not os.path.isdir(self.tCtrl_tgt.GetValue()):
+        if not os.path.isdir(self.tCtrl_tgt.Value):
             wx.MessageDialog(self, "Répertoire cible incorrect", "Erreur", wx.OK | wx.ICON_EXCLAMATION).ShowModal()
             return
-        if self.tCtrl_src.GetValue() == self.tCtrl_tgt.GetValue():
+        if self.tCtrl_src.Value == self.tCtrl_tgt.Value:
             wx.MessageDialog(self, "Répertoire identiques", "Erreur", wx.OK | wx.ICON_EXCLAMATION).ShowModal()
             return
         
-        # D�sactiver les boutons
+        # Disable buttons
         self.button_analyze.Show(False)
         self.button_stop.Show(True)
         self.button_run.Enable(False)
-        # D�sactiver les menus
+        # Disable menus
         self.menuBar_action_analyze.Enable(False)
         self.menuBar_action_run.Enable(False)
         self.menuBar_action_stop.Enable(True)
         
-        # Lancer le thread
+        # Run thread
         self.thread_analyze = threading.Thread(target=self.OnThread_analyze, name="Analyse des répertoires")
         self.thread_analyze.start()
         # self.OnThread_analyze() # tmp
@@ -987,8 +892,8 @@ class SynchonizerFrame(wx.Frame):
             self.lCtrl.DeleteAllItems()
             
             # Faire l'analyse
-            src = self.tCtrl_src.GetValue()
-            tgt = self.tCtrl_tgt.GetValue()
+            src = self.tCtrl_src.Value
+            tgt = self.tCtrl_tgt.Value
             self.analyze(src, tgt)
         except Exception, err:
             wx.MessageDialog(self, str(err), "Erreur", wx.OK | wx.ICON_EXCLAMATION).ShowModal()
@@ -1099,11 +1004,11 @@ class SynchonizerFrame(wx.Frame):
             wx.MessageDialog(self, "Répertoire cible incorrect", "Erreur", wx.OK | wx.ICON_EXCLAMATION).ShowModal()
             return
         
-        # D�sactiver les boutons
+        # Désactiver les boutons
         self.button_analyze.Show(False)
         self.button_stop.Show(True)
         self.button_run.Enable(False)
-        # D�sactiver les menus
+        # Désactiver les menus
         self.menuBar_action_analyze.Enable(False)
         self.menuBar_action_run.Enable(False)
         self.menuBar_action_stop.Enable(True)
@@ -1205,98 +1110,73 @@ class Preferences(wx.Frame):
         
         # Fenêtre
         sizeFenetre = wx.Size(w=275, h=150)
-        wx.Frame.__init__ (self, parent=parent, title="Préférences", size=sizeFenetre)
+        wx.Frame.__init__ (self, parent, title="Préférences", size=sizeFenetre)
         self.SetSizeHints(minW=sizeFenetre.GetWidth(), minH=sizeFenetre.GetHeight(), maxW=sizeFenetre.GetWidth(), maxH=sizeFenetre.GetHeight())
         
         #     Sizer de la fenêtre
-        self.sizer_frame = wx.BoxSizer(orient=wx.VERTICAL)
-        self.SetSizer(sizer=self.sizer_frame)
+        self.sizer_frame = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(self.sizer_frame)
         
         #         Panel g�n�ral
-        self.panel_fenetre = wx.Panel(parent=self)
-        self.sizer_frame.Add(item=self.panel_fenetre, proportion=1, flag=wx.EXPAND, border=5)
+        self.panel_fenetre = wx.Panel(self)
+        self.sizer_frame.Add(self.panel_fenetre, 1, wx.EXPAND, 5)
         
         #             Sizer du panel g�n�ral
         self.sizer_panel = wx.BoxSizer(orient=wx.VERTICAL)
         self.panel_fenetre.SetSizer(sizer=self.sizer_panel)
         
         #                 Titre fenêtre
-        sText_titre = wx.StaticText(parent=self.panel_fenetre, label="Param�tres")
-        font_titre = wx.Font(pointSize=10, family=wx.FONTFAMILY_DEFAULT, style=wx.NORMAL, weight=wx.FONTWEIGHT_BOLD)
-        sText_titre.SetFont(font=font_titre)
-        self.sizer_panel.Add(item=sText_titre, flag=wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, border=5)
+        sText_titre = wx.StaticText(self.panel_fenetre, label="Param�tres")
+        font_titre = wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.NORMAL, wx.FONTWEIGHT_BOLD)
+        sText_titre.SetFont(font_titre)
+        self.sizer_panel.Add(sText_titre, flag=wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, border=5)
         
         #                 Ligne séparatrice
-        ligne_titre_options = wx.StaticLine(parent=self.panel_fenetre)
-        self.sizer_panel.Add(item=ligne_titre_options, flag=wx.ALL | wx.EXPAND, border=5)
+        ligne_titre_options = wx.StaticLine(self.panel_fenetre)
+        self.sizer_panel.Add(ligne_titre_options, flag=wx.ALL | wx.EXPAND, border=5)
         
         #                     Demande de confirmation de suppression
-        self.cBox_confirmationSuppression = wx.CheckBox(parent=self.panel_fenetre, label=" Demande de confirmation de suppression")
+        self.cBox_confirmationSuppression = wx.CheckBox(self.panel_fenetre, label=" Demande de confirmation de suppression")
         self.cBox_confirmationSuppression.SetValue(self.confirmationSuppression)
-        self.cBox_confirmationSuppression.Bind(event=wx.EVT_CHECKBOX, handler=self.OnCheckBox_confirmationSuppression)
-        self.sizer_panel.Add(item=self.cBox_confirmationSuppression, flag=wx.ALL, border=5)
+        self.cBox_confirmationSuppression.Bind(wx.EVT_CHECKBOX, self.OnCheckBox_confirmationSuppression)
+        self.sizer_panel.Add(self.cBox_confirmationSuppression, flag=wx.ALL, border=5)
         #                     Supprimer cible si la source n'existe pas
-        self.cBox_supprimerCible = wx.CheckBox(parent=self.panel_fenetre, label=" Supprimer la cible si la source n'existe pas")
+        self.cBox_supprimerCible = wx.CheckBox(self.panel_fenetre, label=" Supprimer la cible si la source n'existe pas")
         self.cBox_supprimerCible.SetValue(self.supprimerCible)
-        self.cBox_supprimerCible.Bind(event=wx.EVT_CHECKBOX, handler=self.OnCheckBox_supprimerCible)
-        self.sizer_panel.Add(item=self.cBox_supprimerCible, flag=wx.ALL, border=5)
+        self.cBox_supprimerCible.Bind(wx.EVT_CHECKBOX, self.OnCheckBox_supprimerCible)
+        self.sizer_panel.Add(self.cBox_supprimerCible, flag=wx.ALL, border=5)
         #                     Ignorer les cibles plus r�centes
-        self.cBox_ignorerCiblePlusRecente = wx.CheckBox(parent=self.panel_fenetre, label=" Ignorer les cibles plus r�centes que les sources")
+        self.cBox_ignorerCiblePlusRecente = wx.CheckBox(self.panel_fenetre, label=" Ignorer les cibles plus r�centes que les sources")
         self.cBox_ignorerCiblePlusRecente.SetValue(self.ignorerCiblePlusRecente)
-        self.cBox_ignorerCiblePlusRecente.Bind(event=wx.EVT_CHECKBOX, handler=self.OnCheckBox_ignorerCiblePlusRecente)
-        self.sizer_panel.Add(item=self.cBox_ignorerCiblePlusRecente, flag=wx.ALL, border=5)
+        self.cBox_ignorerCiblePlusRecente.Bind(wx.EVT_CHECKBOX, self.OnCheckBox_ignorerCiblePlusRecente)
+        self.sizer_panel.Add(self.cBox_ignorerCiblePlusRecente, flag=wx.ALL, border=5)
         
-        # Événements
-        self.Bind(event=wx.EVT_CLOSE, handler=self.OnClose)
+        self.Bind(wx.EVT_CLOSE, lambda event: self.Hide())
     
-    
-    
-    def OnClose(self, event):
-        '''
-        @brief Fermeture de la fenêtre.
-        
-        @param event: The event.
-        '''
-        
-        self.Hide()
-    
-    
-    
-    ####################################################################################################
-    # Événements: modification des param�tres
-    ####################################################################################################
     
     def OnCheckBox_confirmationSuppression(self, event):
         '''
         @brief Clic sur la case "Demande de confirmation de suppression".
-        
         @param event: The event.
         '''
-        
         self.confirmationSuppression = self.cBox_confirmationSuppression.IsChecked()
         event.Skip()
-    
     
     
     def OnCheckBox_supprimerCible(self, event):
         '''
         @brief Clic sur la case "Supprimer la cible si la source n'existe pas".
-        
         @param event: Evémenement
         '''
-        
         self.supprimerCible = self.cBox_supprimerCible.IsChecked()
         event.Skip()
-    
     
     
     def OnCheckBox_ignorerCiblePlusRecente(self, event):
         '''
         @brief Clic sur la case " Ignorer les cibles plus récentes que les sources".
-        
         @param event: Evémenement
         '''
-        
         self.ignorerCiblePlusRecente = self.cBox_ignorerCiblePlusRecente.IsChecked()
         event.Skip()
 
