@@ -234,41 +234,31 @@ class Analyzer(threading.Thread):
             if self._stop:
                 return
             
-            print "---------"
-            print "obj : " + obj
             relpath = os.path.join(subfolder, obj)
             srcPath = os.path.join(self.src, relpath)
             tgtPath = os.path.join(self.tgt, relpath)
-            # print("srcPath : " + srcPath)
-            # print("tgtPath : " + tgtPath)
+            
             if not os.path.exists(srcPath):
                 if os.path.exists(tgtPath):
-                    print("delete tgtPath")
                     self._callHandler(RemoveAction(relpath, srcPath, tgtPath))
                 else: pass  # ???
             elif os.path.isfile(srcPath):
                 if not os.path.exists(tgtPath):
-                    print("create tgtPath")
                     self._callHandler(CopyAction(relpath, srcPath, tgtPath))
                 elif os.path.isfile(tgtPath):
-                    print("last mofigication date")
                     self._callHandler(UpdateAction(relpath, srcPath, tgtPath))
                 elif os.path.isdir(tgtPath):
-                    print("replace (file to folder)")
                     self._callHandler(UpdateAction(relpath, srcPath, tgtPath))
                 else: pass  # unknown tgtPath type
             elif os.path.isdir(srcPath):
                 if not os.path.exists(tgtPath):
-                    print("create tgtPath")
                     self._callHandler(CopyAction(relpath, srcPath, tgtPath))
                 elif os.path.isfile(tgtPath):
-                    print("replace (folder to file)")
                     self._callHandler(UpdateAction(relpath, srcPath, tgtPath))
                 elif os.path.isdir(tgtPath):
-                    print("recursif...")
                     self._execute(relpath)
-                else: print('Unknown target type: ' + tgtPath)
-            else: print('Unknown source type: ' + srcPath)
+                else: pass
+            else: pass
 
 
 class MyListCtrl(wx.ListCtrl):

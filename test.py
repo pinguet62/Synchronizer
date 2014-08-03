@@ -24,9 +24,8 @@ class TestActions(unittest.TestCase):
     _TEST_FOLDER = "tests"
     _TEST_FOLDER_SRC = os.path.join(_TEST_FOLDER, "Cas_test_sauv")
     _TEST_FOLDER_TGT = os.path.join(_TEST_FOLDER, "Cas_test")
-    
-    _SRC = os.path.joint(_TEST_FOLDER_TGT, "src")
-    _TGT = os.path.joint(_TEST_FOLDER_TGT, "src")
+    _SRC = os.path.join(_TEST_FOLDER_TGT, "src")
+    _TGT = os.path.join(_TEST_FOLDER_TGT, "src")
     
     def setUp(self):
         if os.path.exists(TestActions._TEST_FOLDER_TGT):
@@ -39,7 +38,7 @@ class TestActions(unittest.TestCase):
         def validate():
             pass
         
-        analyzer = GUI.Analyzer(_SRC, _TGT)
+        analyzer = GUI.Analyzer(TestActions._SRC, TestActions._TGT)
         analyzer.handler = lambda action: actions.append(action)
         analyzer.after = validate
         analyzer.start()
