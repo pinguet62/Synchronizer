@@ -16,6 +16,8 @@ __status__ = 'Develpment'
 __version__ = '2.0'
 
 
+import logging
+import logging.config
 import os
 import shutil
 import threading
@@ -29,64 +31,39 @@ import win32clipboard
 import wx
 
 
-def get_size(path):
-    '''
-    @brief Obtenir la taille de la cible.
-    
-    @patam path Chemin de la cible
-    
-    @return Taille en octet
-    '''
-    
-    if os.path.isdir(path):
-        size = 0
-        for root, dirs, files in os.walk(path):
-            for fich in files:
-                size += os.path.getsize(os.path.join(root, fich))
-    else:
-        size = os.path.getsize(path)
-    
-    return size
+logging.config.fileConfig('logging.conf')
+logger = logging.getLogger("synchronyzer")
 
 
-def octetToHumainSize(size):
+def octet_to_human(size):
     '''
-    @brief Convertir la taille en octet vers une mesure compréhensible par l'humain.
-    
-    @param size Taille en octet
-    
-    @return String représentant la taille (1 décimales près)
+    Convert the number of octets to metric prefix value.
+    @param size: The size, in octet.
+    @return The human representation.
     '''
-    
-    if size == '':
-        return ''
-    
     # o
     if size < 1024 ** 1:
         return '%do' % size
     # ko
-    elif size < 1048576:
+    elif size < 1024 ** 2:
         return '%.1fko' % (size / 1024)
     # Mo
-    elif size < 1073741824:
-        return '%.1fMo' % (size / 1048576)
+    elif size < 1024 ** 3:
+        return '%.1fMo' % (size / 1024 ** 2)
     # Go
-    elif size < 1099511627776:
-        return '%.1fGo' % (size / 1073741824)
+    elif size < 1024 ** 4:
+        return '%.1fGo' % (size / 1024 ** 3)
     # To
     else:
-        return '%.1fTo' % (size / 1099511627776)
+        return '%.1fTo' % (size / 1024 ** 4)
 
 
 def get_extension(path):
     '''
-    @brief Obtenir le type de la cible.
-    
-    @param path Chemin de la cible
-    
-    @return Son extension s'il s'agit d'un fichier, "folder" s'il s'agit d'un répertoire
+    Get the extension of object.
+    @param path: The path to object.
+    @return The extension, "folder" if it's a folder.
     '''
-    
     if os.path.isdir(path):
         return 'folder'
     elif os.path.isfile(path):
@@ -128,6 +105,7 @@ def delete(path):
 
 class Action:
     '''The abstract class of actions.'''
+    
     def __init__(self, relpath, srcPath, tgtPath):
         self.relpath = relpath
         '''The relative path to object.'''
@@ -156,16 +134,16 @@ class Action:
             for root, dirs, files in os.walk(path):
                 for file in files:
                     size += os.path.getsize(os.path.join(root, file))
+            return size
         else:
-            size = os.path.getsize(path)
+            return os.path.getsize(path)
     
     def getSize(self):
         '''
-        Get the size of src object.
+        Get the size of the object.
         @return: The size.
         '''
-        print self.srcPath
-        self._getSize(self.srcPath)
+        return self._getSize(self.srcPath)
 
 
 class CopyAction(Action):
@@ -230,8 +208,10 @@ class Analyzer(threading.Thread):
         Run the analyze.
         @param actionHandler: Function called when an action is find. It take the action in parameter.
         '''
+        logger.info("Analyze running...")
         self._execute('.')
         if self.after is not None: self.after()
+        logger.info("Analyze terminated.")
     
     def stop(self):
         self._stop = True
@@ -354,7 +334,7 @@ class MyListCtrl(wx.ListCtrl):
         self.InsertStringItem(index=num, label=action.relpath, imageIndex=self._getImageIndex(extension))
         self.SetStringItem(index=num, col=MyListCtrl._EXTENSION, label='' if extension == 'folder' else extension)
         self.SetStringItem(index=num, col=MyListCtrl._ACTION, label=action.getName())
-        self.SetStringItem(index=num, col=MyListCtrl._TAILLE, label=str(action.getSize()))
+        self.SetStringItem(index=num, col=MyListCtrl._TAILLE, label=octet_to_human(action.getSize()))
     
     
     def DeleteLine(self, index):
@@ -457,6 +437,7 @@ class MyListCtrl(wx.ListCtrl):
     ####################################################################################################
     # Actions du menu
     ####################################################################################################
+    
     
     def AllerA(self, path):
         '''
@@ -819,20 +800,14 @@ class SynchonizerFrame(wx.Frame):
         # Thread
         self.analyzer = Analyzer(self.tCtrl_src.Value, self.tCtrl_tgt.Value)
         self.analyzer.handler = lambda action: self.lCtrl.Add(action)
-        self.analyzer.after = self._enableActionButtons
+        self.analyzer.after = self._onAnalyzeTerminated
         self.analyzer.start()
     
     
-    def OnAnalyzeThread(self):
-        '''Thread who analyze folders.'''
-        
-        self.lCtrl.DeleteAllItems()
-        
-        # Run
-        self.analyzer = Analyzer(self.tCtrl_src.Value, self.tCtrl_tgt.Value)
-        self.analyzer.run(lambda action: self.lCtrl.Add(action))
-        
+    def _onAnalyzeTerminated(self):
+        '''Analyze terminated.'''
         self._enableActionButtons()
+        self.analyzer = None
     
     
     def OnExecute(self):
@@ -841,11 +816,11 @@ class SynchonizerFrame(wx.Frame):
         self._disableActionButtons()
         
         # Thread
-        self.thread_maj = threading.Thread(target=self.OnExecuteThread, name='Mise à jour des fichiers')
+        self.thread_maj = threading.Thread(target=self._onExecuteThread, name='Mise à jour des fichiers')
         self.thread_maj.start()
     
     
-    def OnExecuteThread(self):
+    def _onExecuteThread(self):
         '''Thread who execute actions.'''
         
         self.chargement.SetRange(len(self.lCtrl.actions))
@@ -862,11 +837,14 @@ class SynchonizerFrame(wx.Frame):
         self._enableActionButtons()
         
         self.stop = False
+        self.thread_maj = None
+    
     
     def _enableActionButtons(self):
         self.tool_stop.Enable(False)
         self.tool_analyse.Enable(True)
         self.tool_execute.Enable(True)
+    
     
     def _disableActionButtons(self):
         self.tool_analyse.Enable(False)
