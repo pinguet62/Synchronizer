@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 
 
+
 '''Synchronise two folders.'''
 
 
+
 # TODO: wx.ID_ANY
+
 
 
 __author__ = __maintainer__ = 'Pinguet62'
@@ -14,6 +17,7 @@ __email__ = 'pinguet62@gmail.com'
 __license__ = 'Creative Commons, Attribution NonCommercial ShareAlike, 4.0'
 __status__ = 'Develpment'
 __version__ = '2.0'
+
 
 
 import logging
@@ -30,9 +34,13 @@ import win32gui
 import win32clipboard
 import wx
 
+import action
+
+
 
 logging.config.fileConfig('logging.conf')
-logger = logging.getLogger("synchronyzer")
+logger = logging.getLogger('synchronyzer')  # TODO: 'GUI'
+
 
 
 def octet_to_human(size):
@@ -41,6 +49,7 @@ def octet_to_human(size):
     @param size: The size, in octet.
     @return The human representation.
     '''
+    
     # o
     if size < 1024 ** 1:
         return '%do' % size
@@ -58,12 +67,14 @@ def octet_to_human(size):
         return '%.1fTo' % (size / 1024 ** 4)
 
 
+
 def get_extension(path):
     '''
     Get the extension of object.
     @param path: The path to object.
     @return The extension, "folder" if it's a folder.
     '''
+    
     if os.path.isdir(path):
         return 'folder'
     elif os.path.isfile(path):
@@ -72,12 +83,14 @@ def get_extension(path):
         return ''
 
 
+
 def bitmap_from_extension(extension):
     '''
     Get the bitmap of extension.
     @param extension: The extension.
     @return The image.
     '''
+    
     if extension == 'folder':
         bm = wx.Bitmap(name='icons/folder.png', type=wx.BITMAP_TYPE_PNG)
         bm.SetSize((16, 16))
@@ -91,174 +104,6 @@ def bitmap_from_extension(extension):
         icon.SetHandle(info[0])
         return wx.BitmapFromIcon(icon)
 
-
-def delete(path):
-    '''
-    Delete the file or folder.
-    @param path: Path to object.
-    '''
-    if os.path.isdir(path):
-        shutil.rmtree(path)
-    else:
-        os.remove(path)
-
-
-class Action:
-    '''The abstract class of actions.'''
-    
-    def __init__(self, relpath, srcPath, tgtPath):
-        self.relpath = relpath
-        '''The relative path to object.'''
-        self.srcPath = srcPath
-        '''The source folder.'''
-        self.tgtPath = tgtPath
-        '''The target folder.'''
-    
-    def execute(self):
-        raise NotImplementedError
-    
-    def getExtension(self):
-        return os.path.splitext(self.relpath)[1]
-    
-    def getName(self):
-        raise NotImplementedError
-    
-    def _getSize(self, path):
-        '''
-        Get the size of object.
-        @param path: The path to object.
-        @return: The size.
-        '''
-        if os.path.isdir(path):
-            size = 0
-            for root, dirs, files in os.walk(path):
-                for file in files:
-                    size += os.path.getsize(os.path.join(root, file))
-            return size
-        else:
-            return os.path.getsize(path)
-    
-    def getSize(self):
-        '''
-        Get the size of the object.
-        @return: The size.
-        '''
-        return self._getSize(self.srcPath)
-
-
-class CopyAction(Action):
-    def __init__(self, relpath, srcPath, tgtPath):
-        Action.__init__(self, relpath, srcPath, tgtPath)
-    
-    def getName(self):
-        return 'Add'
-    
-    def execute(self):
-        if os.path.isdir(self.srcPath):
-            shutil.copytree(self.srcPath, self.tgtPath)
-        else:
-            shutil.copy2(self.srcPath, self.tgtPath)
-
-
-class UpdateAction(Action):
-    def __init__(self, relpath, srcPath, tgtPath):
-        Action.__init__(self, relpath, srcPath, tgtPath)
-    
-    def getName(self):
-        return 'Update'
-    
-    def execute(self):
-        delete(self.tgtPath)
-        if os.path.isdir(self.srcPath):
-            shutil.copytree(self.srcPath, self.tgtPath)
-        else:
-            shutil.copy2(self.srcPath, self.tgtPath)
-
-
-class RemoveAction(Action):
-    def __init__(self, relpath, srcPath, tgtPath):
-        Action.__init__(self, relpath, srcPath, tgtPath)
-    
-    def getName(self):
-        return 'Remove'
-    
-    def execute(self):
-        delete(self.tgtPath)
-    
-    def getSize(self):
-        '''
-        Get the size of tgt object.
-        @return: The size.
-        '''
-        return self._getSize(self.tgtPath)
-
-
-class Analyzer(threading.Thread):
-    def __init__(self, src, tgt):
-        threading.Thread.__init__(self, target=self.run, name='Folder analyze')
-        
-        self.src = src
-        self.tgt = tgt
-        self._stop = False
-        self.handler = None
-        self.after = None
-    
-    def run(self):
-        '''
-        Run the analyze.
-        @param actionHandler: Function called when an action is find. It take the action in parameter.
-        '''
-        logger.info("Analyze running...")
-        self._execute('.')
-        if self.after is not None: self.after()
-        logger.info("Analyze terminated.")
-    
-    def stop(self):
-        self._stop = True
-    
-    def _callHandler(self, action):
-        '''
-        Call the handler.
-        @param action: The action.
-        '''
-        if self.handler is not None: self.handler(action)
-    
-    def _execute(self, subfolder):
-        '''
-        Method who browse directories recursively.
-        @param subfolder: The relative path to sub-folder.
-        '''
-        srcFolder = os.path.join(self.src, subfolder)
-        tgtFolder = os.path.join(self.tgt, subfolder)
-        for obj in set(os.listdir(srcFolder) + os.listdir(tgtFolder)):
-            if self._stop:
-                return
-            
-            relpath = os.path.join(subfolder, obj)
-            srcPath = os.path.join(self.src, relpath)
-            tgtPath = os.path.join(self.tgt, relpath)
-            
-            if not os.path.exists(srcPath):
-                if os.path.exists(tgtPath):
-                    self._callHandler(RemoveAction(relpath, srcPath, tgtPath))
-                else: pass  # ???
-            elif os.path.isfile(srcPath):
-                if not os.path.exists(tgtPath):
-                    self._callHandler(CopyAction(relpath, srcPath, tgtPath))
-                elif os.path.isfile(tgtPath):
-                    self._callHandler(UpdateAction(relpath, srcPath, tgtPath))
-                elif os.path.isdir(tgtPath):
-                    self._callHandler(UpdateAction(relpath, srcPath, tgtPath))
-                else: pass  # unknown tgtPath type
-            elif os.path.isdir(srcPath):
-                if not os.path.exists(tgtPath):
-                    self._callHandler(CopyAction(relpath, srcPath, tgtPath))
-                elif os.path.isfile(tgtPath):
-                    self._callHandler(UpdateAction(relpath, srcPath, tgtPath))
-                elif os.path.isdir(tgtPath):
-                    self._execute(relpath)
-                else: pass
-            else: pass
 
 
 class MyListCtrl(wx.ListCtrl):
@@ -424,11 +269,6 @@ class MyListCtrl(wx.ListCtrl):
         self.PopupMenu(menu)
     
     
-    ####################################################################################################
-    # Actions du menu
-    ####################################################################################################
-    
-    
     def AllerA(self, path):
         '''
         @brief Ouvrir une fenètre d'exploration Windows dans le répertoire spécifié.
@@ -522,8 +362,10 @@ class MyListCtrl(wx.ListCtrl):
             wx.MessageDialog(self, str(err), 'Erreur', wx.OK | wx.ICON_EXCLAMATION).ShowModal()
 
 
+
 class SynchonizerFrame(wx.Frame):
     '''Main frame.'''
+    
     
     def __init__(self):
         '''Constructeur.'''
@@ -683,11 +525,11 @@ class SynchonizerFrame(wx.Frame):
     
     # TODO: delete me
     def init(self):
-        if os.path.exists('tests/Cas_test'):
-            shutil.rmtree('tests/Cas_test')
-        shutil.copytree('tests/Cas_test_sauv', 'tests/Cas_test')
-        self.tCtrl_src.SetValue('tests/Cas_test\\src')
-        self.tCtrl_tgt.SetValue('tests/Cas_test\\tgt')
+        if os.path.exists('../tests/Cas_test'):
+            shutil.rmtree('../tests/Cas_test')
+        shutil.copytree('../tests/Cas_test_sauv', '../tests/Cas_test')
+        self.tCtrl_src.SetValue('../tests/Cas_test/src')
+        self.tCtrl_tgt.SetValue('../tests/Cas_test/tgt')
     
     
     def OnClose(self, event):
@@ -788,7 +630,7 @@ class SynchonizerFrame(wx.Frame):
         self.lCtrl.DeleteAllItems()
         
         # Thread
-        self.analyzer = Analyzer(self.tCtrl_src.Value, self.tCtrl_tgt.Value)
+        self.analyzer = action.Analyzer(self.tCtrl_src.Value, self.tCtrl_tgt.Value)
         self.analyzer.handler = lambda action: self.lCtrl.Add(action)
         self.analyzer.after = self._onAnalyzeTerminated
         self.analyzer.start()
@@ -842,8 +684,10 @@ class SynchonizerFrame(wx.Frame):
         self.tool_stop.Enable(True)
 
 
+
 class Preferences(wx.Frame):
     '''Preferences frame.'''
+    
     
     def __init__(self, parent):
         '''
@@ -928,6 +772,7 @@ class Preferences(wx.Frame):
         '''
         self.ignorerCiblePlusRecente = self.cBox_ignorerCiblePlusRecente.IsChecked()
         event.Skip()
+
 
 
 if __name__ == '__main__':
